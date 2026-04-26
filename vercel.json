@@ -1,0 +1,8 @@
+{
+    "rewrites": [
+        {
+            "source": "/projects/:id",
+            "destination": "/api/embed?id=:id"
+        }
+    ]
+}
