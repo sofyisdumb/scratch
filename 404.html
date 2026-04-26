@@ -1,100 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+    <meta name="theme-color" content="#4d97ff">
+
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #111;
-            color: white;
+            margin: 0;
+            padding: 0;
+            background-color: #0f0f0f;
+            color: #ffffff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
             align-items: center;
-            padding: 40px;
+            height: 100vh;
+            overflow: hidden;
         }
-        .container {
-            max-width: 800px;
-            background: #222;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+
+        .card {
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             text-align: center;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid #333;
         }
-        img#thumbnail {
-            width: 100%;
-            border-radius: 10px;
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #333;
+            border-top: 5px solid #4d97ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #4d97ff;
+        }
+
+        p {
+            color: #aaa;
             margin-bottom: 20px;
-            border: 2px solid #4d97ff;
         }
-        h1 { margin: 10px 0; color: #4d97ff; }
-        p#author { font-style: italic; color: #aaa; }
-        #description {
-            text-align: left;
-            background: #333;
-            padding: 15px;
-            border-radius: 8px;
-            white-space: pre-wrap;
+
+        .error-msg {
+            color: #ff4d4d;
+            display: none;
         }
-        .btn {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 25px;
-            background: #4d97ff;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        .btn:hover { background: #357ae8; }
-        #loader { font-size: 1.2rem; color: #4d97ff; }
     </style>
 </head>
+
 <body>
 
-    <div class="container" id="main-content" style="display:none;">
-        <img id="thumbnail" src="" alt="Project Thumbnail">
-        <h1 id="title">Loading Project...</h1>
-        <p id="author"></p>
-        <div id="description"></div>
-        <a id="scratch-link" class="btn" href="#">View on Scratch</a>
+    <div class="card">
+        <div id="loader" class="spinner"></div>
+        <h1 id="title">Redirecting...</h1>
+        <p id="status">Fetching project data from Scratch...</p>
+        <div id="error" class="error-msg">Project not found or invalid ID.</div>
     </div>
 
-    <div id="loader">Fetching data from Scratch...</div>
-
     <script>
-        async function loadProject() {
-            // 1. Get the ID from the URL: ?id=12345
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get('id');
+        async function handleRedirect() {
+            const statusText = document.getElementById('status');
+            const errorText = document.getElementById('error');
+            const loader = document.getElementById('loader');
 
-            if (!id) {
-                document.getElementById('loader').innerText = "Error: No Project ID provided in URL.";
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(Boolean);
+            const projectId = segments[segments.length - 1];
+
+            if (!projectId || isNaN(projectId)) {
+                showError("No valid Project ID found in the URL.");
                 return;
             }
 
             try {
-                const response = await fetch(`https://api.scratch.mit.edu/projects/${id}`);
-                if (!response.ok) throw new Error("Project not found");
+                const response = await fetch(`https://api.scratch.mit.edu/projects/${projectId}`);
+
+                if (!response.ok) {
+                    throw new Error("Project is unshared or private.");
+                }
+
                 const data = await response.json();
+                statusText.innerText = `Found: ${data.title}. Teleporting...`;
 
-                document.title = `${data.title} - My Scratch Portal`;
-                document.getElementById('title').innerText = data.title;
-                document.getElementById('author').innerText = `Created by: ${data.author.username}`;
-                document.getElementById('description').innerText = data.instructions + "\n\n" + data.description;
-                document.getElementById('thumbnail').src = data.images['510x312'] || data.images['282x210'];
-                document.getElementById('scratch-link').href = `https://scratch.mit.edu/projects/${id}`;
-
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('loader').style.display = 'none';
+                setTimeout(() => {
+                    window.location.href = `https://scratch.mit.edu/projects/${projectId}/`;
+                }, 500);
 
             } catch (err) {
-                document.getElementById('loader').innerText = "Error: Could not load project. It might be unshared or the ID is wrong.";
+                showError("This project might be unshared, or Scratch is down.");
             }
         }
 
-        loadProject();
+        function showError(msg) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('title').innerText = "Oops!";
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').innerText = msg;
+        }
+
+        handleRedirect();
     </script>
 </body>
 </html>
